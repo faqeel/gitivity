@@ -15,6 +15,7 @@ export default async function* fetch(args) {
     // open Gitlab API cliemt
     let client = new Gitlab({
         token: args.token,
+        host: args.baseUrl,
     });
 
     // fetch current user metadata for author tag

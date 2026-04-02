@@ -27,6 +27,12 @@ export default {
                 description: 'A lower bound timestamp to export from.',
             })
             .alias('f', 'from')
+            .option('base-url', {
+                type: 'string',
+                description:
+                    'A custom base URL to override the default service endpoint (e.g. https://github.example.com or https://gitlab.example.com).',
+            })
+            .alias('u', 'base-url')
             .require('service')
             .require('token');
     },

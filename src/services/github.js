@@ -13,6 +13,7 @@ export default async function* fetch(args) {
     // open GitHub API cliemt
     let client = new Octokit({
         auth: args.token,
+        baseUrl: args.baseUrl,
     });
 
     // retrieve the current user info
