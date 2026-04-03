@@ -29,7 +29,9 @@
   },
   "scripts": {
     "format": "prettier --write bin/* src/**/*",
-    "lint": "prettier --check bin/* src/**/*"
+    "lint": "prettier --check bin/* src/**/*",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@gitbeaker/rest": "^42.2.0",
@@ -40,7 +42,9 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "prettier": "^3.5.3"
+    "@vitest/coverage-v8": "^4.1.2",
+    "prettier": "^3.5.3",
+    "vitest": "^4.1.2"
   },
   "prettier": {
     "singleQuote": true,
