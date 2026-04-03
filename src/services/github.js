@@ -30,7 +30,7 @@ export default async function* fetch(args) {
     // initialize timestamps
     let user = viewer.viewer;
     let author = `${user.name} <${user.email}>`;
-    let created = moment.utc(user.createdAt);
+    let created = args.from ? moment.utc(args.from) : moment.utc(user.createdAt);
     let current = moment.utc();
 
     // buffer all years before yielding to avoid racing with import spinner
