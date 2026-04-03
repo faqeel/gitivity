@@ -3,6 +3,8 @@ import moment from 'moment';
 
 const mockShowCurrentUser = vi.hoisted(() => vi.fn());
 const mockAllEvents = vi.hoisted(() => vi.fn());
+const mockSpinDone = vi.hoisted(() => vi.fn());
+const mockSpin = vi.hoisted(() => vi.fn(() => ({ done: mockSpinDone })));
 
 vi.mock('@gitbeaker/rest', () => ({
     Gitlab: vi.fn(function () {
@@ -14,6 +16,8 @@ vi.mock('@gitbeaker/rest', () => ({
         };
     }),
 }));
+
+vi.mock('../../src/util/spinner.js', () => ({ spin: mockSpin }));
 
 import { Gitlab } from '@gitbeaker/rest';
 import fetch from '../../src/services/gitlab.js';
@@ -133,5 +137,18 @@ describe('gitlab service', () => {
         for (const [userId] of mockAllEvents.mock.calls) {
             expect(userId).toBe(42);
         }
+    });
+
+    it('calls spin once per event type with type label', async () => {
+        for await (const _ of fetch({ token: 'tok' })) { /* noop */ }
+
+        expect(mockSpin).toHaveBeenCalledTimes(8);
+        expect(mockSpin).toHaveBeenCalledWith(expect.stringContaining('pushed'));
+    });
+
+    it('calls spinner.done once per event type', async () => {
+        for await (const _ of fetch({ token: 'tok' })) { /* noop */ }
+
+        expect(mockSpinDone).toHaveBeenCalledTimes(8);
     });
 });

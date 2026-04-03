@@ -9,6 +9,9 @@ function makeStream(...lines) {
 const mockCommit = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 const mockInit = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 const mockLog = vi.hoisted(() => vi.fn());
+const mockSpinUpdate = vi.hoisted(() => vi.fn());
+const mockSpinDone = vi.hoisted(() => vi.fn());
+const mockSpin = vi.hoisted(() => vi.fn(() => ({ update: mockSpinUpdate, done: mockSpinDone })));
 
 vi.mock('mkdirp', () => ({ mkdirp: vi.fn().mockResolvedValue(undefined) }));
 
@@ -17,6 +20,8 @@ vi.mock('simple-git', () => ({
         return { init: mockInit, log: mockLog, commit: mockCommit };
     }),
 }));
+
+vi.mock('../../src/util/spinner.js', () => ({ spin: mockSpin }));
 
 describe('import command', () => {
     let chdir;
@@ -138,5 +143,45 @@ describe('import command', () => {
         await importer.handler({ target: '/tmp/repo', branch: 'main', stream: makeStream(), git: { init: mockInit, log: mockLog, commit: mockCommit } });
 
         expect(mockInit).toHaveBeenCalled();
+    });
+
+    it('calls spin on first commit', async () => {
+        mockLog.mockRejectedValue(new Error('no commits'));
+        const action = { id: 'a', author: 'Alice <a@b.com>', timestamp: '2024-01-01T00:00:00.000Z' };
+
+        await importer.handler({ target: '/tmp/repo', branch: 'main', stream: makeStream(action) });
+
+        expect(mockSpin).toHaveBeenCalledWith('1 commit imported');
+    });
+
+    it('updates spinner count for subsequent commits', async () => {
+        mockLog.mockRejectedValue(new Error('no commits'));
+        const actions = [
+            { id: 'a', author: 'Alice <a@b.com>', timestamp: '2024-01-01T00:00:00.000Z' },
+            { id: 'b', author: 'Alice <a@b.com>', timestamp: '2024-01-02T00:00:00.000Z' },
+        ];
+
+        await importer.handler({ target: '/tmp/repo', branch: 'main', stream: makeStream(...actions) });
+
+        expect(mockSpinUpdate).toHaveBeenCalledWith('2 commits imported');
+    });
+
+    it('calls spinner.done after all commits', async () => {
+        mockLog.mockRejectedValue(new Error('no commits'));
+        const action = { id: 'a', author: 'Alice <a@b.com>', timestamp: '2024-01-01T00:00:00.000Z' };
+
+        await importer.handler({ target: '/tmp/repo', branch: 'main', stream: makeStream(action) });
+
+        expect(mockSpinDone).toHaveBeenCalledTimes(1);
+    });
+
+    it('writes "0 commits imported" to stderr when nothing imported', async () => {
+        mockLog.mockRejectedValue(new Error('no commits'));
+        const stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => {});
+
+        await importer.handler({ target: '/tmp/repo', branch: 'main', stream: makeStream() });
+
+        expect(stderrWrite).toHaveBeenCalledWith('✓ 0 commits imported\n');
+        stderrWrite.mockRestore();
     });
 });

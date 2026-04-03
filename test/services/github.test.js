@@ -2,12 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import moment from 'moment';
 
 const mockGraphql = vi.hoisted(() => vi.fn());
+const mockSpinUpdate = vi.hoisted(() => vi.fn());
+const mockSpinDone = vi.hoisted(() => vi.fn());
+const mockSpin = vi.hoisted(() => vi.fn(() => ({ update: mockSpinUpdate, done: mockSpinDone })));
 
 vi.mock('@octokit/rest', () => ({
     Octokit: vi.fn(function () {
         return { graphql: mockGraphql };
     }),
 }));
+
+vi.mock('../../src/util/spinner.js', () => ({ spin: mockSpin }));
 
 import { Octokit } from '@octokit/rest';
 import fetch from '../../src/services/github.js';
@@ -121,5 +126,38 @@ describe('github service', () => {
 
         const expectedYears = thisYear - createdYear + 1;
         expect(mockGraphql).toHaveBeenCalledTimes(1 + expectedYears);
+    });
+
+    it('calls spin once per year with year label', async () => {
+        mockGraphql.mockResolvedValueOnce(viewer).mockResolvedValue(makeCalendarResponse([]));
+
+        for await (const _ of fetch({ token: 'tok' })) { /* noop */ }
+
+        expect(mockSpin).toHaveBeenCalledWith(expect.stringContaining(`${thisYear} activity`));
+        expect(mockSpin).toHaveBeenCalledTimes(1);
+    });
+
+    it('updates spinner with contribution count after fetching year', async () => {
+        mockGraphql
+            .mockResolvedValueOnce(viewer)
+            .mockResolvedValue(
+                makeCalendarResponse([{ date: `${thisYear}-03-10`, contributionCount: 5 }]),
+            );
+
+        for await (const _ of fetch({ token: 'tok' })) { /* noop */ }
+
+        expect(mockSpinUpdate).toHaveBeenCalledWith(expect.stringContaining('5 contributions'));
+    });
+
+    it('calls spinner.done once per year', async () => {
+        const createdYear = thisYear - 1;
+        const multiYearViewer = {
+            viewer: { ...viewer.viewer, createdAt: `${createdYear}-01-01T00:00:00.000Z` },
+        };
+        mockGraphql.mockResolvedValueOnce(multiYearViewer).mockResolvedValue(makeCalendarResponse([]));
+
+        for await (const _ of fetch({ token: 'tok' })) { /* noop */ }
+
+        expect(mockSpinDone).toHaveBeenCalledTimes(2);
     });
 });
