@@ -1,5 +1,6 @@
 import moment from 'moment';
 import { Gitlab } from '@gitbeaker/rest';
+import { spin } from '../util/spinner.js';
 
 /**
  * Export action activity from GitLab.
@@ -36,6 +37,9 @@ export default async function* fetch(args) {
 
     // walk all enabled types
     for (let type of enabled) {
+        // start spinner for this event type
+        let spinner = spin(`Fetching ${type} events...`);
+
         // params
         let opts = {
             action: type,
@@ -56,6 +60,8 @@ export default async function* fetch(args) {
                 timestamp: moment.utc(event.created_at),
             });
         }
+
+        spinner.done();
     }
 
     // sort actions by timestamp

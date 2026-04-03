@@ -1,6 +1,7 @@
 import Git from 'simple-git';
 import readline from 'readline';
 import { mkdirp } from 'mkdirp';
+import { spin } from '../util/spinner.js';
 
 // cmd definition
 export default {
@@ -57,6 +58,10 @@ export default {
             crlfDelay: Infinity,
         });
 
+        // track progress
+        let count = 0;
+        let spinner = null;
+
         // process each line of input
         for await (let line of stream) {
             // pull author and commit char
@@ -79,6 +84,21 @@ export default {
                 '--author',
                 author,
             ]);
+
+            count++;
+
+            // lazy spinner for total count
+            if (!spinner) {
+                spinner = spin(`${count} commit imported`);
+            } else {
+                spinner.update(`${count} commits imported`);
+            }
+        }
+
+        if (spinner) {
+            spinner.done();
+        } else {
+            process.stderr.write('✓ 0 commits imported\n');
         }
     },
 };
