@@ -149,6 +149,20 @@ describe('github service', () => {
         expect(mockSpinUpdate).toHaveBeenCalledWith(expect.stringContaining('5 contributions'));
     });
 
+    it('starts iteration from args.from when provided', async () => {
+        const fromYear = thisYear - 1;
+        const multiYearViewer = {
+            viewer: { ...viewer.viewer, createdAt: `${thisYear - 3}-01-01T00:00:00.000Z` },
+        };
+        mockGraphql.mockResolvedValueOnce(multiYearViewer).mockResolvedValue(makeCalendarResponse([]));
+
+        for await (const _ of fetch({ token: 'tok', from: `${fromYear}-06-15T00:00:00.000Z` })) { /* noop */ }
+
+        // viewer query (1) + 1 contribution query (fromYear-06 to fromYear+1-06, which passes current date)
+        // vs 4 queries without args.from (one per year since thisYear - 3)
+        expect(mockGraphql).toHaveBeenCalledTimes(2);
+    });
+
     it('calls spinner.done once per year', async () => {
         const createdYear = thisYear - 1;
         const multiYearViewer = {
